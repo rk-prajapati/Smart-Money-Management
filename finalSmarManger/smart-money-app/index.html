@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Source project: smart-money-app/ (css + 8 js modules).
+     Single-file build: python3 build.py  -->
+<title>SmartMoney — Smart Money Manager & Expense Tracker</title>
+<meta name="description" content="Offline-first expense tracker with smart budgets, savings goals and auto insights.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<noscript><p style="padding:40px;text-align:center;font-family:sans-serif">Please enable JavaScript to use SmartMoney 🙂</p></noscript>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><div class="logo">₹</div>SmartMoney</div>
+    <button class="icobtn" id="btnTheme" aria-label="Theme">🌙</button>
+  </header>
+  <main id="main">
+    <section id="view-home" class="view"></section>
+    <section id="view-stats" class="view"></section>
+    <section id="view-plan" class="view"></section>
+    <section id="view-settings" class="view"></section>
+  </main>
+  <nav class="nav">
+    <button class="navbtn" data-view="home"><span class="ni">🏠</span>Home</button>
+    <button class="navbtn" data-view="stats"><span class="ni">📊</span>Stats</button>
+    <button class="fab" id="fabAdd" aria-label="Add transaction">＋</button>
+    <button class="navbtn" data-view="plan"><span class="ni">🎯</span>Plan</button>
+    <button class="navbtn" data-view="settings"><span class="ni">⚙️</span>More</button>
+  </nav>
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+
+<!-- Add / Edit Transaction Sheet -->
+<div class="sheet" id="txnSheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head">
+    <div class="seg">
+      <button id="segExp" class="on">− Expense</button>
+      <button id="segInc" class="inc">＋ Income</button>
+    </div>
+    <button class="sheet-close" id="closeTxn" aria-label="Close">✕</button>
+  </div>
+  <div class="sheet-body">
+    <div class="amt-display expense" id="amtDisplay">₹0</div>
+    <div class="cat-grid" id="catGrid"></div>
+    <div class="field-row">
+      <input type="text" id="noteInput" placeholder="Note (optional) — Swiggy, Uber…" maxlength="60">
+      <input type="date" id="dateInput" style="max-width:150px;flex-shrink:0">
+    </div>
+    <div class="method-row" id="methodRow"></div>
+    <div class="keypad" id="keypad"></div>
+    <button class="btn btn-danger hidden" id="delTxn">🗑 Delete transaction</button>
+  </div>
+</div>
+
+<!-- New Goal Sheet -->
+<div class="sheet" id="goalSheet">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head"><b>New Savings Goal 🎯</b><button class="sheet-close" id="closeGoal" aria-label="Close">✕</button></div>
+  <div class="sheet-body">
+    <div class="gem-grid" id="gemGrid"></div>
+    <div class="field"><input id="gName" type="text" placeholder="Goal name — e.g. &quot;New phone&quot;" maxlength="40"></div>
+    <div class="field"><input id="gTarget" type="number" min="1" placeholder="Target amount (₹)"></div>
+    <div class="field"><input id="gDate" type="date"></div>
+    <button class="btn btn-primary" id="saveGoal" style="margin-top:10px">Create goal 🎯</button>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal" id="confirmModal">
+  <div class="mbox">
+    <h3 id="cmTitle"></h3>
+    <p class="wsub" id="cmMsg"></p>
+    <div class="cm-btns">
+      <button class="btn btn-ghost" id="cmCancel">Cancel</button>
+      <button class="btn btn-danger" id="cmOk">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Welcome Modal -->
+<div class="modal" id="welcomeModal">
+  <div class="mbox welcome">
+    <div class="wemoji">💰</div>
+    <h2>Welcome to SmartMoney!</h2>
+    <p class="wsub">Smart money management — track, analyze and save.</p>
+    <div class="wfeat"><span>📊</span>Smart graphs — 7 days / 1 month / 3 months</div>
+    <div class="wfeat"><span>🎯</span>Budgets with 80% alerts and savings goals</div>
+    <div class="wfeat"><span>💡</span>Automatic smart insights &amp; predictions</div>
+    <button class="btn btn-primary" id="wDemo">🎯 Explore with demo data</button>
+    <button class="btn btn-ghost" id="wFresh">✨ Start fresh</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/01-config.js"></script>
+<script src="js/02-storage.js"></script>
+<script src="js/03-utils.js"></script>
+<script src="js/04-charts.js"></script>
+<script src="js/05-insights.js"></script>
+<script src="js/06-views.js"></script>
+<script src="js/07-actions.js"></script>
+<script src="js/08-app.js"></script>
+</body>
+</html>
+k=e.target.closest('.key');
+    if(!k)return;
+    if(k.getAttribute('data-k')==='ok')saveTxn();
+    else keyPress(k.getAttribute('data-k'));
+  });
+  $('#catGrid').addEventListener('click',function(e){
+    const c=e.target.closest('.cat-chip');
+    if(c){selCat[sheetType]=c.getAttribute('data-cat');buildCatGrid();}
+  });
+  $('#methodRow').addEventListener('click',function(e){
+    const m=e.target.closest('.mchip');
+    if(m){selMethod=m.getAttribute('data-m');syncMethodRow();}
+  });
+  $('#delTxn').addEventListener('click',function(){
+    confirmDialog('Delete transaction?','This transaction will be permanently deleted.','Delete',function(){
+      db.txns=db.txns.filter(function(t){return t.id!==editId;});
+      saveDB();closeSheet();renderView(currentView);toast('Deleted 🗑️');
+    });
+  });
+  $('#closeGoal').addEventListener('click',closeSheet);
+  $('#saveGoal').addEventListener('click',saveGoal);
+  $('#gemGrid').addEventListener('click',function(e){
+    const g=e.target.closest('.gemoji');
+    if(g){goalEmoji=g.getAttribute('data-e');syncGemGrid();}
+  });
+  $('#cmCancel').addEventListener('click',hideConfirm);
+  $('#confirmModal').addEventListener('click',function(e){if(e.target.id==='confirmModal')hideConfirm();});
+  $('#cmOk').addEventListener('click',function(){
+    const cb=cmCb;hideConfirm();if(cb)cb();
+  });
+  $('#wDemo').addEventListener('click',function(){
+    seedDemo();$('#welcomeModal').classList.remove('show');renderView('home');
+    toast('Demo data loaded — explore! 🚀');
+  });
+  $('#wFresh').addEventListener('click',function(){
+    db.seenWelcome=true;saveDB();$('#welcomeModal').classList.remove('show');
+  });
+  window.addEventListener('resize',debounce(function(){renderView(currentView);},250));
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){closeSheet();hideConfirm();}
+  });
+}
+
+/* ================= INIT ================= */
+function buildKeypad(){
+  const keys=['1','2','3','⌫','4','5','6','C','7','8','9','.','00','0','ok'];
+  $('#keypad').innerHTML=keys.map(function(k){
+    if(k==='ok')return '<div class="key ok" data-k="ok">SAVE ✓</div>';
+    return '<div class="key '+((k==='⌫'||k==='C')?'acc':'')+'" data-k="'+k+'">'+k+'</div>';
+  }).join('');
+}
+function init(){
+  loadDB();
+  applyTheme();
+  buildKeypad();
+  syncGemGrid();
+  bindEvents();
+  if(!db.seenWelcome&&db.txns.length===0)$('#welcomeModal').classList.add('show');
+  renderView('home');
+}
+init();
+</script>
+</body>
+</html>
